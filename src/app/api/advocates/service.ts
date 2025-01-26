@@ -1,4 +1,4 @@
-import { asc, gt } from "drizzle-orm";
+import { asc, desc, gt, lt } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import db from "@/db";
@@ -11,15 +11,34 @@ const advocatesSelectSchema = createSelectSchema(advocates, {
 export type Advocate = z.infer<typeof advocatesSelectSchema>;
 
 export async function getAdvocates(
-  cursor?: number,
-  pageSize = 15,
+  next?: number,
+  previous?: number,
+  pageSize = 5,
 ): Promise<Advocate[]> {
-  const data = await db
-    .select()
-    .from(advocates)
-    .where(cursor ? gt(advocates.id, cursor) : undefined)
-    .limit(pageSize)
-    .orderBy(asc(advocates.id));
+  let data = null;
+  if (next !== undefined) {
+    data = await db
+      .select()
+      .from(advocates)
+      .where(gt(advocates.id, next))
+      .limit(pageSize)
+      .orderBy(asc(advocates.id));
+  } else if (previous !== undefined) {
+    data = await db
+      .select()
+      .from(advocates)
+      .where(lt(advocates.id, previous))
+      .limit(pageSize)
+      .orderBy(desc(advocates.id));
+
+    data = data.toReversed();
+  } else {
+    data = await db
+      .select()
+      .from(advocates)
+      .limit(pageSize)
+      .orderBy(asc(advocates.id));
+  }
   const parsed = data.map((d) => advocatesSelectSchema.parse(d));
   return parsed;
 }

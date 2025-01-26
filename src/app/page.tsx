@@ -1,21 +1,57 @@
-"use client";page
+"use client";
 
 import { useEffect, useState } from "react";
-import { Advocate } from "@/db/schema";
+import { Advocate } from "@/app/api/advocates/service";
 
 export default function Home() {
+  const pageSize = 5;
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
   const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
+  const [cursorForward, setCursorForward] = useState<number | undefined>(
+    undefined,
+  );
+  const [cursorBackward, setCursorBackward] = useState<number | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
+    // Believe URL is sufficiently sanatized and protected from malicious input.
+    fetch(`/api/advocates?limit=${pageSize}`).then((response) => {
       response.json().then((jsonResponse) => {
         setAdvocates(jsonResponse.data);
         setFilteredAdvocates(jsonResponse.data);
       });
     });
   }, []);
+
+  useEffect(() => {
+    if (cursorForward !== undefined) {
+      console.log("fetching next page of advocates...");
+      // Believe URL is sufficiently sanatized and protected from malicious input.
+      fetch(`/api/advocates?next=${cursorForward}&limit=${pageSize}`).then(
+        (response) => {
+          response.json().then((jsonResponse) => {
+            setAdvocates(jsonResponse.data);
+            setFilteredAdvocates(jsonResponse.data);
+          });
+        },
+      );
+      setCursorForward(undefined);
+    } else if (cursorBackward !== undefined) {
+      console.log("fetching prev page of advocates...");
+      // Believe URL is sufficiently sanatized and protected from malicious input.
+      fetch(`/api/advocates?previous=${cursorBackward}&limit=${pageSize}`).then(
+        (response) => {
+          response.json().then((jsonResponse) => {
+            setAdvocates(jsonResponse.data);
+            setFilteredAdvocates(jsonResponse.data);
+          });
+        },
+      );
+      setCursorBackward(undefined);
+    }
+  }, [cursorForward, cursorBackward]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value;
@@ -95,6 +131,24 @@ export default function Home() {
             })}
         </tbody>
       </table>
+      {!!advocates.length && (
+        <div>
+          <button
+            onClick={() => {
+              setCursorBackward(advocates[0].id);
+            }}
+          >
+            Prev page
+          </button>
+          <button
+            onClick={() => {
+              setCursorForward(advocates[advocates.length - 1].id);
+            }}
+          >
+            Next page
+          </button>
+        </div>
+      )}
     </main>
   );
 }

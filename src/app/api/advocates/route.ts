@@ -1,5 +1,6 @@
 import { getAdvocates } from "@/db/schema";
 
 export async function GET() {
-  return Response.json({ data: getAdvocates() });
+  const advocates = await getAdvocates();
+  return Response.json({ data: advocates });
 }

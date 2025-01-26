@@ -1,4 +1,4 @@
-"use client";
+"use client";page
 
 import { useEffect, useState } from "react";
 import { Advocate } from "@/db/schema";

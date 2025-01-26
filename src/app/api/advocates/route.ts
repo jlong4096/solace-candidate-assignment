@@ -1,12 +1,6 @@
-import db from "../../../db";
-import { advocates } from "../../../db/schema";
-import { advocateData } from "../../../db/seed/advocates";
+import { getAdvocates } from "@/db/schema";
 
 export async function GET() {
-  // Uncomment this line to use a database
-  // const data = await db.select().from(advocates);
-
-  const data = advocateData;
-
-  return Response.json({ data });
+  const advocates = await getAdvocates();
+  return Response.json({ data: advocates });
 }

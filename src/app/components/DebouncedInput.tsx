@@ -1,0 +1,45 @@
+import React, { useState, useEffect } from "react";
+
+interface DebouncedInputProps {
+  placeholder?: string;
+  className?: string;
+  style?: Record<string, string>;
+  handleChange: (input: string) => void;
+  debounceTime?: number;
+}
+
+const DebouncedInput= ({className, style, handleChange, placeholder, debounceTime}: DebouncedInputProps) => {
+  const [inputValue, setInputValue] = useState("");
+  const [debouncedValue, setDebouncedValue] = useState("");
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setDebouncedValue(inputValue);
+    }, debounceTime || 500);
+
+    return () => {
+      clearTimeout(debounceTimer);
+    };
+  }, [inputValue]);
+
+  useEffect(() => {
+    handleChange(debouncedValue);
+  }, [debouncedValue]);
+
+  const localChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(event.target.value);
+  };
+
+  return (
+      <input
+        type="text"
+        value={inputValue}
+        onChange={localChange}
+        placeholder={placeholder}
+        className={className}
+        style={style}
+      />
+  );
+};
+
+export default DebouncedInput;

@@ -8,9 +8,6 @@ import {
   timestamp,
   bigint,
 } from "drizzle-orm/pg-core";
-import { createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
-import db from "@/db";
 
 const advocates = pgTable("advocates", {
   id: serial("id").primaryKey(),
@@ -23,17 +20,5 @@ const advocates = pgTable("advocates", {
   phoneNumber: bigint("phone_number", { mode: "number" }).notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
-
-const advocatesSelectSchema = createSelectSchema(advocates, {
-  specialties: z.string().array(),
-});
-
-export type Advocate = z.infer<typeof advocatesSelectSchema>;
-
-export async function getAdvocates(): Promise<Advocate[]> {
-  const data = await db.select().from(advocates);
-  const parsed = data.map((d) => advocatesSelectSchema.parse(d));
-  return parsed;
-}
 
 export { advocates };

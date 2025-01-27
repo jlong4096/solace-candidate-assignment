@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Advocate } from "@/app/api/advocates/service";
+import { useQuery, useQueryClient, QueryClient } from "@tanstack/react-query";
+import { QueryAdvocatesResponse, Advocate } from "@/app/api/advocates/service";
 import DebouncedInput from "./DebouncedInput";
 
 const PAGE_SIZE = 5;
@@ -17,14 +17,45 @@ const fetchAdvocates = async (
   cursor: number | null,
   direction: "next" | "previous",
   limit = PAGE_SIZE,
-): Promise<Advocate[]> => {
+): Promise<QueryAdvocatesResponse> => {
   const response = await fetch(
     `/api/advocates?search=${search}&${direction}=${cursor}&limit=${limit}`,
   );
   if (!response.ok) {
     throw new Error("Network error");
   }
-  return (await response.json()).data;
+  return response.json();
+};
+
+const prefetchNextPage = (
+  client: QueryClient,
+  data: Advocate[],
+  search: string,
+  pageSize: number,
+) => {
+  client.prefetchQuery({
+    queryKey: [
+      "advocates",
+      search,
+      data[data.length - 1]?.id,
+      "next",
+      pageSize,
+    ],
+    queryFn: () =>
+      fetchAdvocates(search, data[data.length - 1]?.id, "next", pageSize),
+  });
+};
+
+const prefetchPreviousPage = (
+  client: QueryClient,
+  data: Advocate[],
+  search: string,
+  pageSize: number,
+) => {
+  client.prefetchQuery({
+    queryKey: ["advocates", search, data[0]?.id, "previous", pageSize],
+    queryFn: () => fetchAdvocates(search, data[0]?.id, "previous", pageSize),
+  });
 };
 
 const AdvocatesTable = () => {
@@ -32,55 +63,44 @@ const AdvocatesTable = () => {
   const pageSize = PAGE_SIZE;
   const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
   const [search, setSearch] = useState<string>("");
+  const [previousSearch, setPreviousSearch] = useState<string>("");
   const [cursor, setCursor] = useState<CursorState>({
     cursor: null,
     direction: "next",
   });
+  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState<boolean>(false);
 
-  const prefetchNextPage = (data: Advocate[]) => {
-    queryClient.prefetchQuery({
-      queryKey: [
-        "advocates",
-        search,
-        data[data.length - 1]?.id,
-        "next",
-        pageSize,
-      ],
-      queryFn: () =>
-        fetchAdvocates(search, data[data.length - 1]?.id, "next", pageSize),
-    });
-  };
-
-  const prefetchPreviousPage = (data: Advocate[]) => {
-    queryClient.prefetchQuery({
-      queryKey: ["advocates", search, data[0]?.id, "previous", pageSize],
-      queryFn: () => fetchAdvocates(search, data[0]?.id, "previous", pageSize),
-    });
-  };
-
-  const { data, isLoading, isError, error } = useQuery<Advocate[], Error>({
+  const { data, isLoading, isError, error } = useQuery<
+    QueryAdvocatesResponse,
+    Error
+  >({
     queryKey: ["advocates", search, cursor.cursor, cursor.direction, pageSize],
     queryFn: () =>
       fetchAdvocates(search, cursor.cursor, cursor.direction, pageSize),
     keepPreviousData: true,
     staleTime: 5000,
-    onSuccess: (data) => {
-      if (data.length) {
+    onSuccess: (response) => {
+      if (response.data.length) {
         console.log("prefetching...");
-        prefetchNextPage(data);
-        prefetchPreviousPage(data);
+        prefetchNextPage(queryClient, response.data, search, pageSize);
+        prefetchPreviousPage(queryClient, response.data, search, pageSize);
       }
     },
   });
 
   useEffect(() => {
     if (!!data) {
-      setFilteredAdvocates(data);
+      setHasNextPage(data.hasNextPage);
+      setHasPreviousPage(data.hasPreviousPage);
+      setFilteredAdvocates(data.data);
     }
   }, [data]);
 
   const onChange = (input: string) => {
+    setPreviousSearch(search);
     setSearch(input);
+    setCursor({ cursor: null, direction: "next" });
   };
 
   if (isLoading) {
@@ -148,6 +168,7 @@ const AdvocatesTable = () => {
       {!!filteredAdvocates.length && (
         <div>
           <button
+            disabled={!hasPreviousPage}
             onClick={() => {
               setCursor({
                 cursor: filteredAdvocates[0].id,
@@ -158,6 +179,7 @@ const AdvocatesTable = () => {
             Prev page
           </button>
           <button
+            disabled={!hasNextPage}
             onClick={() => {
               setCursor({
                 cursor: filteredAdvocates[filteredAdvocates.length - 1].id,

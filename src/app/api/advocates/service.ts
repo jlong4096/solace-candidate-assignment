@@ -10,6 +10,12 @@ const advocatesSelectSchema = createSelectSchema(advocates, {
 
 export type Advocate = z.infer<typeof advocatesSelectSchema>;
 
+export interface QueryAdvocatesResponse {
+  data: Advocate[];
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 function searchClause(search: string) {
   const searchNum = Number(search);
   return or(
@@ -27,7 +33,7 @@ export async function queryAdvocates(
   next?: number,
   previous?: number,
   pageSize = 5,
-): Promise<Advocate[]> {
+): Promise<QueryAdvocatesResponse> {
   let data = null;
   const clause = search ? searchClause(search) : undefined;
   if (next !== undefined) {
@@ -37,7 +43,7 @@ export async function queryAdvocates(
       .where(
         clause ? and(gt(advocates.id, next), clause) : gt(advocates.id, next),
       )
-      .limit(pageSize)
+      .limit(pageSize + 1)
       .orderBy(asc(advocates.id));
   } else if (previous !== undefined) {
     data = await db
@@ -48,7 +54,7 @@ export async function queryAdvocates(
           ? and(lt(advocates.id, previous), clause)
           : lt(advocates.id, previous),
       )
-      .limit(pageSize)
+      .limit(pageSize + 1)
       .orderBy(desc(advocates.id));
 
     data = data.toReversed();
@@ -57,9 +63,28 @@ export async function queryAdvocates(
       .select()
       .from(advocates)
       .where(clause ? clause : undefined)
-      .limit(pageSize)
+      .limit(pageSize + 1)
       .orderBy(asc(advocates.id));
   }
-  const parsed = data.map((d) => advocatesSelectSchema.parse(d));
-  return parsed;
+
+  let parsed = data.map((d) => advocatesSelectSchema.parse(d));
+
+  const fullPage = parsed.length === pageSize + 1;
+  let hasNextPage = fullPage;
+  let hasPreviousPage = !!next;
+  if (previous) {
+    hasNextPage = true;
+    hasPreviousPage = fullPage;
+    if (fullPage) {
+      parsed = parsed.slice(pageSize * -1);
+    }
+  } else if (fullPage) {
+    parsed = parsed.slice(0, pageSize);
+  }
+
+  return {
+    data: parsed,
+    hasNextPage,
+    hasPreviousPage,
+  };
 }

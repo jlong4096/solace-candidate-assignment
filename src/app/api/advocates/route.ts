@@ -8,11 +8,11 @@ export async function GET(req: NextRequest) {
   const previous = Number(searchParams.get("previous") || undefined);
   const pageSize = Number(searchParams.get("limit") || undefined);
 
-  const advocates = await queryAdvocates(
+  const response = await queryAdvocates(
     search,
     !isNaN(next) ? next : undefined,
     !isNaN(previous) ? previous : undefined,
     !isNaN(pageSize) ? pageSize : undefined,
   );
-  return NextResponse.json({ data: advocates });
+  return NextResponse.json(response);
 }

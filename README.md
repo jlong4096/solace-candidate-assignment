@@ -10,6 +10,8 @@ Install dependencies
 npm i
 ```
 
+NOTE:  The dependency `@tanstack/react-query` hasn't been updated to install with React 19 (though seems to work fine for React 19).  Until this is resolved, install with `npm i --force`.
+
 Run the development server:
 
 ```bash

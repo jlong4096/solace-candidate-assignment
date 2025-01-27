@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 interface DebouncedInputProps {
+  value?: string;
   placeholder?: string;
   className?: string;
   style?: Record<string, string>;
@@ -8,9 +9,13 @@ interface DebouncedInputProps {
   debounceTime?: number;
 }
 
-const DebouncedInput= ({className, style, handleChange, placeholder, debounceTime}: DebouncedInputProps) => {
-  const [inputValue, setInputValue] = useState("");
+const DebouncedInput= ({value, className, style, handleChange, placeholder, debounceTime}: DebouncedInputProps) => {
+  const [inputValue, setInputValue] = useState(value || "");
   const [debouncedValue, setDebouncedValue] = useState("");
+
+  useEffect(() => {
+    setInputValue(value || "");
+  }, [value]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {

@@ -25,11 +25,11 @@ const DebouncedInput= ({value, className, style, handleChange, placeholder, debo
     return () => {
       clearTimeout(debounceTimer);
     };
-  }, [inputValue]);
+  }, [inputValue, debounceTime]);
 
   useEffect(() => {
     handleChange(debouncedValue);
-  }, [debouncedValue]);
+  }, [debouncedValue, handleChange]);
 
   const localChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient, QueryClient } from "@tanstack/react-query";
 import { parsePhoneNumberWithError } from "libphonenumber-js";
 import {
@@ -113,10 +113,10 @@ const AdvocatesTable = () => {
     }
   }, [data]);
 
-  const handleSearch = (input: string) => {
+  const handleSearch = useCallback((input: string) => {
     setSearch(input);
     setCursor({ cursor: null, direction: "next" });
-  };
+  }, []);
 
   const handlePageSizeChange = (input: number) => {
     setPageSize(input);
@@ -127,6 +127,8 @@ const AdvocatesTable = () => {
     setExpandedRows((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
+        // Drizzlie shouldn't be linting this code.
+        // eslint-disable-next-line drizzle/enforce-delete-with-where
         newSet.delete(id);
       } else {
         newSet.add(id);
